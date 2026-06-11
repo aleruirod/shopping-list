@@ -8,12 +8,8 @@ BACKEND_DIR = Path(__file__).resolve().parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-try:
-    from .database import engine, Base
-    from .routes import items, scan
-except ImportError:
-    from database import engine, Base
-    from routes import items, scan
+from database import engine, Base
+from routes import items, scan
 
 Base.metadata.create_all(bind=engine)
 
