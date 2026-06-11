@@ -1,6 +1,10 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
 from sqlalchemy.sql import func
-from database import Base
+
+try:
+    from .database import Base
+except ImportError:
+    from database import Base
 
 CATEGORIES = [
     "Dairy", "Bakery", "Meat & Fish", "Fruit & Veg",

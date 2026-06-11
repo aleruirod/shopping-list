@@ -51,8 +51,8 @@ export default function App() {
       const p = await api.scanBarcode(code)
       await addItem(p.name, p.category || 'Other', code, null)
       msg(`Added: ${p.name}`)
-    } catch {
-      msg('Product not found — enter name manually', true)
+    } catch (e) {
+      msg(e.message || 'Product not found — enter name manually', true)
     } finally { setLoading(false) }
   }
 

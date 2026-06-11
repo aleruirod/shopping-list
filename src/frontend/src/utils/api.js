@@ -29,8 +29,15 @@ export const api = {
 
   deleteChecked: () => fetch(makeUrl('/items/checked/all'), { method: 'DELETE' }),
 
-  scanBarcode: (barcode) => fetch(makeUrl(`/scan/${barcode}`)).then(r => {
-    if (!r.ok) throw new Error('Product not found')
+  scanBarcode: (barcode) => fetch(makeUrl(`/scan/${barcode}`)).then(async r => {
+    if (!r.ok) {
+      let errorText = 'Product not found'
+      try {
+        const data = await r.json()
+        if (data?.detail) errorText = data.detail
+      } catch {}
+      throw new Error(errorText)
+    }
     return r.json()
   }),
 }
