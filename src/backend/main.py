@@ -15,7 +15,22 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Shopping List API")
 
-app.options('*', cors())
+origins = [
+    "http://localhost.tiangolo.com",
+    "https://localhost.tiangolo.com",
+    "http://localhost",
+    "http://localhost:8080",
+    "https://shopping-list-gw0rpprx9-aleruirod.vercel.app",
+    "http://shopping-list-gw0rpprx9-aleruirod.vercel.app"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(items.router, prefix="/items", tags=["items"])
 app.include_router(scan.router, prefix="/scan", tags=["scan"])
