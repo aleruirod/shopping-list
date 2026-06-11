@@ -24,7 +24,16 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
+
+@app.middleware("http")
+async def add_cors_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET,POST,PATCH,DELETE,OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 app.include_router(items.router, prefix="/items", tags=["items"])
 app.include_router(scan.router, prefix="/scan", tags=["scan"])
