@@ -20,8 +20,8 @@ origins = [
     "https://localhost.tiangolo.com",
     "http://localhost",
     "http://localhost:8080",
-    "https://shopping-list-gw0rpprx9-aleruirod.vercel.app",
-    "http://shopping-list-gw0rpprx9-aleruirod.vercel.app"
+    "https://*-aleruirod.vercel.app",
+    "http://*-aleruirod.vercel.app"
 ]
 
 app.add_middleware(
