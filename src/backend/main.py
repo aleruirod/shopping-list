@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.backend.routes import vision
-from src.backend.database import engine, Base
-from src.backend.routes import items, scan
+from routes import vision
+from database import engine, Base
+from routes import items, scan
 
 Base.metadata.create_all(bind=engine)
 
