@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import vision
 from database import engine, Base
 from routes import items, scan
 

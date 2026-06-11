@@ -271,7 +271,6 @@ shopping-list/
 │   └── routes/
 │       ├── items.py             ← CRUD: list, add, update, delete items
 │       ├── scan.py              ← Barcode: Open Food Facts → UPC fallback
-│       └── vision.py           ← Claude Haiku: object recognition + handwriting OCR
 └── frontend/
     ├── index.html
     ├── package.json
