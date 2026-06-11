@@ -15,7 +15,15 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('manual')
   const fileRef = useRef()
 
-  const refresh = () => api.getItems().then(setItems)
+  const refresh = async () => {
+    try {
+      const data = await api.getItems()
+      setItems(Array.isArray(data) ? data : [])
+    } catch (error) {
+      msg(error.message || 'Could not load items', true)
+      setItems([])
+    }
+  }
   useEffect(() => { refresh() }, [])
 
   const grouped = CATEGORIES.reduce((acc, cat) => {
