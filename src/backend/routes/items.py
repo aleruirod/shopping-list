@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
-from database import get_db
-from models import Item, guess_category
+from src.backend.database import get_db
+from src.backend.models import Item, guess_category
 
 router = APIRouter()
 

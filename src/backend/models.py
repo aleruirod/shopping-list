@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.sql import func
-from database import Base
+from src.backend.database import Base
 
 CATEGORIES = [
     "Dairy", "Bakery", "Meat & Fish", "Fruit & Veg",
