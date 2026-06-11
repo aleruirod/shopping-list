@@ -33,22 +33,4 @@ export const api = {
     if (!r.ok) throw new Error('Product not found')
     return r.json()
   }),
-
-  recognizeObject: (file) => {
-    const fd = new FormData()
-    fd.append('file', file)
-    return fetch(makeUrl('/vision/recognize'), { method: 'POST', body: fd }).then(r => {
-      if (!r.ok) throw new Error('Recognition failed')
-      return r.json()
-    })
-  },
-
-  transcribeHandwriting: (file) => {
-    const fd = new FormData()
-    fd.append('file', file)
-    return fetch(makeUrl('/vision/handwriting'), { method: 'POST', body: fd }).then(r => {
-      if (!r.ok) throw new Error('Transcription failed')
-      return r.json()
-    })
-  }
 }

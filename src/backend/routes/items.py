@@ -13,6 +13,7 @@ class ItemCreate(BaseModel):
     quantity: int = 1
     unit: str = ""
     barcode: Optional[str] = None
+    photo: Optional[str] = None
 
 class ItemUpdate(BaseModel):
     name: Optional[str] = None

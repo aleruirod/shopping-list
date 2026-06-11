@@ -13,6 +13,9 @@ export default function App() {
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('manual')
+  const [photoName, setPhotoName] = useState('')
+  const [photoCategory, setPhotoCategory] = useState('Other')
+  const [photoQty, setPhotoQty] = useState(1)
   const fileRef = useRef()
 
   const refresh = async () => {
@@ -34,10 +37,10 @@ export default function App() {
 
   const msg = (text, err) => { setStatus({ text, err }); setTimeout(() => setStatus(''), 3000) }
 
-  const addItem = async (name, cat, barcode) => {
+  const addItem = async (name, cat, barcode, photo, quantity = qty) => {
     if (!name.trim()) return
-    await api.addItem({ name: name.trim(), category: cat || category, quantity: qty, barcode })
-    setInput(''); setQty(1); refresh()
+    await api.addItem({ name: name.trim(), category: cat || category, quantity, barcode, photo })
+    setInput(''); setQty(1); setPhotoName(''); setPhotoQty(1); setPhotoCategory('Other'); refresh()
   }
 
   const handleBarcode = async (code) => {
@@ -46,34 +49,37 @@ export default function App() {
     msg('Looking up barcode…')
     try {
       const p = await api.scanBarcode(code)
-      await addItem(p.name, p.category || 'Other', code)
+      await addItem(p.name, p.category || 'Other', code, null)
       msg(`Added: ${p.name}`)
     } catch {
       msg('Product not found — enter name manually', true)
     } finally { setLoading(false) }
   }
 
-  const handlePhoto = async (e, mode) => {
+  const handlePhoto = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
+    if (!photoName.trim()) {
+      msg('Enter a name for the photo item', true)
+      return
+    }
     setLoading(true)
-    msg(mode === 'object' ? 'Identifying product…' : 'Reading handwriting…')
+    msg('Uploading photo item…')
     try {
-      if (mode === 'object') {
-        const p = await api.recognizeObject(file)
-        await addItem(p.name, p.category, null)
-        msg(`Added: ${p.name}`)
-      } else {
-        const r = await api.transcribeHandwriting(file)
-        for (const item of r.items) {
-          await api.addItem({ name: item.name, category: item.category, quantity: 1 })
-        }
-        await refresh()
-        msg(`Added ${r.items.length} items from your list`)
-      }
+      const reader = new FileReader()
+      const photoData = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      await addItem(photoName, photoCategory, null, photoData, photoQty)
+      msg(`Added: ${photoName}`)
     } catch (e) {
-      msg(e.message || 'Failed — try again', true)
-    } finally { setLoading(false); e.target.value = '' }
+      msg(e.message || 'Failed to upload photo item', true)
+    } finally {
+      setLoading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
   }
 
   const toggle = async (item) => {
@@ -102,7 +108,7 @@ export default function App() {
       {/* Input tabs */}
       <div style={s.card}>
         <div style={s.tabs}>
-          {[['manual','✏️ Type'],['barcode','📷 Barcode'],['photo','🖼 Photo'],['handwriting','✍️ Handwriting']].map(([id,label]) => (
+          {[['manual','✏️ Type'],['barcode','📷 Barcode'],['photo','🖼 Photo']].map(([id,label]) => (
             <button key={id} onClick={() => setActiveTab(id)} style={{ ...s.tab, ...(activeTab === id ? s.tabActive : {}) }}>{label}</button>
           ))}
         </div>
@@ -129,24 +135,23 @@ export default function App() {
         )}
 
         {activeTab === 'photo' && (
-          <div style={s.center}>
-            <label style={s.bigBtn}>
-              {loading ? 'Identifying…' : '🖼 Take / upload photo'}
-              <input ref={fileRef} type="file" accept="image/*" capture="environment"
-                onChange={e => handlePhoto(e, 'object')} style={{ display: 'none' }} />
-            </label>
-            <p style={s.hint}>Takes a photo of a product and identifies it automatically</p>
-          </div>
-        )}
-
-        {activeTab === 'handwriting' && (
-          <div style={s.center}>
-            <label style={s.bigBtn}>
-              {loading ? 'Reading…' : '✍️ Photo of handwritten list'}
-              <input type="file" accept="image/*" capture="environment"
-                onChange={e => handlePhoto(e, 'handwriting')} style={{ display: 'none' }} />
-            </label>
-            <p style={s.hint}>Reads a handwritten shopping list and adds all items at once</p>
+          <div style={s.row}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <input value={photoName} onChange={e => setPhotoName(e.target.value)}
+                placeholder="Item name…" style={s.textInput} />
+              <select value={photoCategory} onChange={e => setPhotoCategory(e.target.value)} style={s.select}>
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+              <input type="number" min={1} value={photoQty} onChange={e => setPhotoQty(+e.target.value)} style={s.qtyInput} />
+            </div>
+            <div style={s.center}>
+              <label style={s.bigBtn}>
+                {loading ? 'Uploading…' : '🖼 Upload photo'}
+                <input ref={fileRef} type="file" accept="image/*" capture="environment"
+                  onChange={handlePhoto} style={{ display: 'none' }} />
+              </label>
+              <p style={s.hint}>Add a photo for the item you want on the list</p>
+            </div>
           </div>
         )}
       </div>
@@ -158,10 +163,13 @@ export default function App() {
           {catItems.map(item => (
             <div key={item.id} style={{ ...s.itemRow, opacity: item.checked ? 0.5 : 1 }}>
               <input type="checkbox" checked={item.checked} onChange={() => toggle(item)} style={s.checkbox} />
-              <span style={{ ...s.itemName, textDecoration: item.checked ? 'line-through' : 'none' }}>
-                {item.name}
-                {item.quantity > 1 && <span style={s.qty}> ×{item.quantity}</span>}
-              </span>
+              <div style={s.itemContent}>
+                <span style={{ ...s.itemName, textDecoration: item.checked ? 'line-through' : 'none' }}>
+                  {item.name}
+                  {item.quantity > 1 && <span style={s.qty}> ×{item.quantity}</span>}
+                </span>
+                {item.photo && <img src={item.photo} alt={item.name} style={s.thumbnail} />}
+              </div>
               <button onClick={() => remove(item.id)} style={s.removeBtn}>✕</button>
             </div>
           ))}
@@ -195,7 +203,9 @@ const s = {
   badge: { background: '#eee', borderRadius: 20, padding: '1px 8px', fontSize: 12, color: '#666' },
   itemRow: { display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderTop: '1px solid #f0f0f0' },
   checkbox: { width: 18, height: 18, cursor: 'pointer', accentColor: '#1a73e8' },
-  itemName: { flex: 1, fontSize: 15 },
+  itemContent: { flex: 1, display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 },
+  itemName: { flex: 1, fontSize: 15, minWidth: 0 },
+  thumbnail: { width: 56, height: 56, objectFit: 'cover', borderRadius: 12, border: '1px solid #eee' },
   qty: { color: '#888', fontSize: 13 },
   removeBtn: { border: 'none', background: 'none', color: '#bbb', cursor: 'pointer', fontSize: 16, padding: '0 4px' },
   clearBtn: { padding: '6px 14px', borderRadius: 8, border: '1px solid #c00', background: '#fff', color: '#c00', cursor: 'pointer', fontSize: 13 },

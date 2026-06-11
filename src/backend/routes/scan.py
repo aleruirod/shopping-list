@@ -19,6 +19,8 @@ async def lookup_open_food_facts(barcode: str):
         ).strip()
         brand = product.get("brands", "").split(",")[0].strip()
         full_name = f"{brand} {name}".strip() if brand else name
+        if not full_name:
+            return None
         category = product.get("pnns_groups_1") or product.get("categories", "").split(",")[0].strip()
         return {"name": full_name, "category": category, "source": "openfoodfacts"}
     return None

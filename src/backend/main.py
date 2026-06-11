@@ -17,7 +17,6 @@ app.add_middleware(
 
 app.include_router(items.router, prefix="/items", tags=["items"])
 app.include_router(scan.router, prefix="/scan", tags=["scan"])
-app.include_router(vision.router, prefix="/vision", tags=["vision"])
 
 @app.get("/health")
 def health():

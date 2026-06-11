@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
 from sqlalchemy.sql import func
-from database import Base
+from src.backend.database import Base
 
 CATEGORIES = [
     "Dairy", "Bakery", "Meat & Fish", "Fruit & Veg",
@@ -36,4 +36,5 @@ class Item(Base):
     unit = Column(String, default="")
     checked = Column(Boolean, default=False)
     barcode = Column(String, nullable=True)
+    photo = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
