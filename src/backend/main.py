@@ -15,9 +15,11 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Shopping List API")
 
+origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
