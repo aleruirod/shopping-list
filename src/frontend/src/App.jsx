@@ -29,11 +29,19 @@ export default function App() {
   }
   useEffect(() => { refresh() }, [])
 
-  const grouped = CATEGORIES.reduce((acc, cat) => {
-    const cat_items = items.filter(i => i.category === cat)
-    if (cat_items.length) acc[cat] = cat_items
+  const grouped = items.reduce((acc, item) => {
+    const cat = item.category || 'Other'
+    if (!acc[cat]) acc[cat] = []
+    acc[cat].push(item)
     return acc
   }, {})
+
+  const orderedCategories = Object.keys(grouped).sort((a, b) => {
+    const indexA = CATEGORIES.indexOf(a)
+    const indexB = CATEGORIES.indexOf(b)
+    if (indexA !== -1 || indexB !== -1) return (indexA === -1 ? 1 : indexA) - (indexB === -1 ? 1 : indexB)
+    return a.localeCompare(b)
+  })
 
   const msg = (text, err) => { setStatus({ text, err }); setTimeout(() => setStatus(''), 3000) }
 
@@ -157,10 +165,10 @@ export default function App() {
       </div>
 
       {/* Shopping list by category */}
-      {Object.entries(grouped).map(([cat, catItems]) => (
+      {orderedCategories.map(cat => (
         <div key={cat} style={s.card}>
-          <h2 style={s.catTitle}>{cat} <span style={s.badge}>{catItems.filter(i => !i.checked).length}</span></h2>
-          {catItems.map(item => (
+          <h2 style={s.catTitle}>{cat} <span style={s.badge}>{grouped[cat].filter(i => !i.checked).length}</span></h2>
+          {grouped[cat].map(item => (
             <div key={item.id} style={{ ...s.itemRow, opacity: item.checked ? 0.5 : 1 }}>
               <input type="checkbox" checked={item.checked} onChange={() => toggle(item)} style={s.checkbox} />
               <div style={s.itemContent}>
