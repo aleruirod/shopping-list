@@ -39,7 +39,7 @@ def create_item(item: ItemCreate, db: Session = Depends(get_db)):
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
-    db_item = Item(**item.dict(exclude={"category"}), category=category, photo=photo)
+    db_item = Item(**item.dict(exclude={"category", "photo"}), category=category, photo=photo)
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
