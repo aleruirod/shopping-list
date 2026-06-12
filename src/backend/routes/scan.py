@@ -3,6 +3,104 @@ from fastapi import APIRouter, HTTPException
 
 router = APIRouter()
 
+CATEGORY_MAP = {
+    "dairy": "Dairy",
+    "milk": "Dairy",
+    "cheese": "Dairy",
+    "yogurt": "Dairy",
+    "butter": "Dairy",
+    "cream": "Dairy",
+    "fromage": "Dairy",
+    "bakery": "Bakery",
+    "bread": "Bakery",
+    "baguette": "Bakery",
+    "croissant": "Bakery",
+    "cake": "Bakery",
+    "pastry": "Bakery",
+    "cookie": "Bakery",
+    "biscuit": "Bakery",
+    "cereal": "Bakery",
+    "meat": "Meat & Fish",
+    "fish": "Meat & Fish",
+    "chicken": "Meat & Fish",
+    "beef": "Meat & Fish",
+    "pork": "Meat & Fish",
+    "lamb": "Meat & Fish",
+    "salmon": "Meat & Fish",
+    "tuna": "Meat & Fish",
+    "ham": "Meat & Fish",
+    "fruit": "Fruit & Veg",
+    "vegetable": "Fruit & Veg",
+    "veg": "Fruit & Veg",
+    "apple": "Fruit & Veg",
+    "banana": "Fruit & Veg",
+    "tomato": "Fruit & Veg",
+    "lettuce": "Fruit & Veg",
+    "carrot": "Fruit & Veg",
+    "salad": "Fruit & Veg",
+    "frozen": "Frozen",
+    "ice cream": "Frozen",
+    "ice-cream": "Frozen",
+    "pizza": "Frozen",
+    "meal": "Frozen",
+    "drink": "Drinks",
+    "beverage": "Drinks",
+    "juice": "Drinks",
+    "soda": "Drinks",
+    "water": "Drinks",
+    "coffee": "Drinks",
+    "tea": "Drinks",
+    "beer": "Drinks",
+    "wine": "Drinks",
+    "snack": "Snacks",
+    "chips": "Snacks",
+    "crisps": "Snacks",
+    "chocolate": "Snacks",
+    "candy": "Snacks",
+    "cracker": "Snacks",
+    "granola": "Snacks",
+    "bar": "Snacks",
+    "cleaning": "Household",
+    "detergent": "Household",
+    "soap": "Household",
+    "paper": "Household",
+    "toilet": "Household",
+    "disinfectant": "Household",
+    "shampoo": "Personal Care",
+    "conditioner": "Personal Care",
+    "toothpaste": "Personal Care",
+    "razor": "Personal Care",
+    "lotion": "Personal Care",
+    "deodorant": "Personal Care",
+}
+
+
+def normalize_category(raw: str):
+    if not raw:
+        return None
+    raw = raw.lower().replace("-", " ").replace("_", " ")
+    for keyword, category in CATEGORY_MAP.items():
+        if keyword in raw:
+            return category
+    return None
+
+
+def infer_category_from_product(product: dict):
+    search_fields = [
+        product.get("pnns_groups_1", ""),
+        product.get("categories", ""),
+        product.get("categories_tags", ""),
+        product.get("brands", ""),
+        product.get("product_name_en", ""),
+        product.get("product_name", ""),
+    ]
+    for field in search_fields:
+        category = normalize_category(field)
+        if category:
+            return category
+    return None
+
+
 async def lookup_open_food_facts(barcode: str):
     url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
     async with httpx.AsyncClient(timeout=5.0) as client:
@@ -21,9 +119,10 @@ async def lookup_open_food_facts(barcode: str):
         full_name = f"{brand} {name}".strip() if brand else name
         if not full_name:
             return None
-        category = product.get("pnns_groups_1") or product.get("categories", "").split(",")[0].strip()
+        category = infer_category_from_product(product) or "Other"
         return {"name": full_name, "category": category, "source": "openfoodfacts"}
     return None
+
 
 async def lookup_upc(barcode: str):
     url = f"https://api.upcitemdb.com/prod/trial/lookup?upc={barcode}"
@@ -33,12 +132,14 @@ async def lookup_upc(barcode: str):
     items = data.get("items", [])
     if items:
         item = items[0]
+        category = normalize_category(item.get("category", "")) or "Other"
         return {
             "name": item.get("title", "Unknown"),
-            "category": item.get("category", ""),
+            "category": category,
             "source": "upcitemdb"
         }
     return None
+
 
 @router.get("/{barcode}")
 async def scan_barcode(barcode: str):
