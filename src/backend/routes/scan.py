@@ -1,3 +1,4 @@
+import asyncio
 import httpx
 from fastapi import APIRouter, HTTPException
 
@@ -85,6 +86,22 @@ def normalize_category(raw: str):
     return None
 
 
+async def fetch_json_with_retries(url: str, max_attempts: int = 3, timeout: float = 5.0):
+    last_error = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+                response = await client.get(url)
+                response.raise_for_status()
+                return response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            last_error = exc
+            if attempt < max_attempts:
+                await asyncio.sleep(0.25 * attempt)
+                continue
+    raise last_error
+
+
 def infer_category_from_product(product: dict):
     search_fields = [
         product.get("pnns_groups_1", ""),
@@ -103,9 +120,11 @@ def infer_category_from_product(product: dict):
 
 async def lookup_open_food_facts(barcode: str):
     url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        r = await client.get(url)
-        data = r.json()
+    try:
+        data = await fetch_json_with_retries(url)
+    except Exception:
+        return None
+
     if data.get("status") == 1:
         product = data["product"]
         name = (
@@ -126,9 +145,11 @@ async def lookup_open_food_facts(barcode: str):
 
 async def lookup_upc(barcode: str):
     url = f"https://api.upcitemdb.com/prod/trial/lookup?upc={barcode}"
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        r = await client.get(url)
-        data = r.json()
+    try:
+        data = await fetch_json_with_retries(url)
+    except Exception:
+        return None
+
     items = data.get("items", [])
     if items:
         item = items[0]
