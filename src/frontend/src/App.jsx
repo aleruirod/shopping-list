@@ -19,6 +19,8 @@ export default function App() {
   const fileRef = useRef()
 
   const [bucketPhotos, setBucketPhotos] = useState([])
+  const [selectedPhoto, setSelectedPhoto] = useState(null)
+  const [photoZoom, setPhotoZoom] = useState(1)
 
   const refresh = async () => {
     try {
@@ -38,6 +40,20 @@ export default function App() {
       setBucketPhotos([])
     }
   }
+
+  const openPhoto = (src) => {
+    setSelectedPhoto(src)
+    setPhotoZoom(1)
+  }
+
+  const closePhoto = () => {
+    setSelectedPhoto(null)
+    setPhotoZoom(1)
+  }
+
+  const zoomIn = () => setPhotoZoom(z => Math.min(z + 0.25, 3))
+  const zoomOut = () => setPhotoZoom(z => Math.max(z - 0.25, 0.5))
+  const resetZoom = () => setPhotoZoom(1)
 
   useEffect(() => { refresh(); refreshBucketPhotos() }, [])
 
@@ -190,7 +206,14 @@ export default function App() {
                   {item.name}
                   {item.quantity > 1 && <span style={s.qty}> ×{item.quantity}</span>}
                 </span>
-                {item.photo && <img src={api.getPhotoUrl(item.photo)} alt={item.name} style={s.thumbnail} />}
+                {item.photo && (
+                  <img
+                    src={api.getPhotoUrl(item.photo)}
+                    alt={item.name}
+                    style={s.thumbnail}
+                    onClick={() => openPhoto(api.getPhotoUrl(item.photo))}
+                  />
+                )}
               </div>
               <button onClick={() => remove(item.id)} style={s.removeBtn}>✕</button>
             </div>
@@ -205,8 +228,31 @@ export default function App() {
           <h2 style={s.catTitle}>Bucket photos</h2>
           <div style={s.photoGrid}>
             {bucketPhotos.map(key => (
-              <img key={key} src={api.getPhotoUrl(key)} alt="Bucket photo" style={s.bucketThumbnail} />
+              <img
+                key={key}
+                src={api.getPhotoUrl(key)}
+                alt="Bucket photo"
+                style={s.bucketThumbnail}
+                onClick={() => openPhoto(api.getPhotoUrl(key))}
+              />
             ))}
+          </div>
+        </div>
+      )}
+
+      {selectedPhoto && (
+        <div style={s.lightboxOverlay} onClick={closePhoto}>
+          <div style={s.lightboxContent} onClick={e => e.stopPropagation()}>
+            <button onClick={closePhoto} style={s.lightboxClose}>✕</button>
+            <div style={s.lightboxControls}>
+              <button onClick={zoomOut} style={s.lightboxButton}>−</button>
+              <span style={s.lightboxLabel}>{photoZoom.toFixed(2)}×</span>
+              <button onClick={zoomIn} style={s.lightboxButton}>+</button>
+              <button onClick={resetZoom} style={s.lightboxReset}>Reset</button>
+            </div>
+            <div style={s.lightboxImageWrapper}>
+              <img src={selectedPhoto} alt="Enlarged" style={{ ...s.lightboxImage, transform: `scale(${photoZoom})` }} />
+            </div>
           </div>
         </div>
       )}
@@ -239,8 +285,17 @@ const s = {
   itemContent: { flex: 1, display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 },
   itemName: { flex: 1, fontSize: 15, minWidth: 0 },
   thumbnail: { width: 56, height: 56, objectFit: 'cover', borderRadius: 12, border: '1px solid #eee' },
-  bucketThumbnail: { width: 100, height: 100, objectFit: 'cover', borderRadius: 12, border: '1px solid #eee' },
+  bucketThumbnail: { width: 100, height: 100, objectFit: 'cover', borderRadius: 12, border: '1px solid #eee', cursor: 'pointer' },
   photoGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 10 },
+  lightboxOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  lightboxContent: { position: 'relative', maxWidth: '90vw', maxHeight: '90vh', width: '100%', background: '#111', borderRadius: 16, padding: 18, boxShadow: '0 12px 40px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: 14 },
+  lightboxClose: { position: 'absolute', top: 12, right: 12, border: 'none', background: '#fff', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16, fontWeight: 700 },
+  lightboxControls: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'center' },
+  lightboxButton: { padding: '8px 14px', borderRadius: 10, border: 'none', background: '#1a73e8', color: '#fff', cursor: 'pointer' },
+  lightboxReset: { padding: '8px 14px', borderRadius: 10, border: 'none', background: '#fff', color: '#1a73e8', cursor: 'pointer', fontWeight: 600 },
+  lightboxLabel: { color: '#fff', fontWeight: 600 },
+  lightboxImageWrapper: { flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  lightboxImage: { maxWidth: '100%', maxHeight: '80vh', transition: 'transform 0.2s ease', cursor: 'grab' },
   qty: { color: '#888', fontSize: 13 },
   removeBtn: { border: 'none', background: 'none', color: '#bbb', cursor: 'pointer', fontSize: 16, padding: '0 4px' },
   clearBtn: { padding: '6px 14px', borderRadius: 8, border: '1px solid #c00', background: '#fff', color: '#c00', cursor: 'pointer', fontSize: 13 },
