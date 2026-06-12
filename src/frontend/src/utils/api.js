@@ -7,6 +7,17 @@ export const api = {
     return r.json()
   }),
 
+  getBucketPhotos: () => fetch(makeUrl('/photos/')).then(r => {
+    if (!r.ok) throw new Error('Failed to load bucket photos')
+    return r.json()
+  }),
+
+  getPhotoUrl: (photoKey) => {
+    if (!photoKey) return null
+    if (photoKey.startsWith('data:')) return photoKey
+    return makeUrl('/photos/' + photoKey.split('/').map(encodeURIComponent).join('/'))
+  },
+
   addItem: (item) => fetch(makeUrl('/items/'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

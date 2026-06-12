@@ -3,13 +3,15 @@ import sys
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 BACKEND_DIR = Path(__file__).resolve().parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from database import engine, Base
-from routes import items, scan
+from routes import items, scan, photos
+from storage import is_storage_configured
 
 Base.metadata.create_all(bind=engine)
 
@@ -41,6 +43,7 @@ async def preflight_handler(rest_of_path: str, request: Request):
 
 app.include_router(items.router, prefix="/items", tags=["items"])
 app.include_router(scan.router, prefix="/scan", tags=["scan"])
+app.include_router(photos.router, prefix="/photos", tags=["photos"])
 
 @app.get("/health")
 def health():

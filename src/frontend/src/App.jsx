@@ -18,6 +18,8 @@ export default function App() {
   const [photoQty, setPhotoQty] = useState(1)
   const fileRef = useRef()
 
+  const [bucketPhotos, setBucketPhotos] = useState([])
+
   const refresh = async () => {
     try {
       const data = await api.getItems()
@@ -27,7 +29,17 @@ export default function App() {
       setItems([])
     }
   }
-  useEffect(() => { refresh() }, [])
+
+  const refreshBucketPhotos = async () => {
+    try {
+      const data = await api.getBucketPhotos()
+      setBucketPhotos(Array.isArray(data) ? data : [])
+    } catch (_) {
+      setBucketPhotos([])
+    }
+  }
+
+  useEffect(() => { refresh(); refreshBucketPhotos() }, [])
 
   const grouped = items.reduce((acc, item) => {
     const cat = item.category || 'Other'
@@ -48,7 +60,9 @@ export default function App() {
   const addItem = async (name, cat, barcode, photo, quantity = qty) => {
     if (!name.trim()) return
     await api.addItem({ name: name.trim(), category: cat || category, quantity, barcode, photo })
-    setInput(''); setQty(1); setPhotoName(''); setPhotoQty(1); setPhotoCategory('Other'); refresh()
+    setInput(''); setQty(1); setPhotoName(''); setPhotoQty(1); setPhotoCategory('Other');
+    await refresh()
+    refreshBucketPhotos()
   }
 
   const handleBarcode = async (code) => {
@@ -176,7 +190,7 @@ export default function App() {
                   {item.name}
                   {item.quantity > 1 && <span style={s.qty}> ×{item.quantity}</span>}
                 </span>
-                {item.photo && <img src={item.photo} alt={item.name} style={s.thumbnail} />}
+                {item.photo && <img src={api.getPhotoUrl(item.photo)} alt={item.name} style={s.thumbnail} />}
               </div>
               <button onClick={() => remove(item.id)} style={s.removeBtn}>✕</button>
             </div>
@@ -185,6 +199,17 @@ export default function App() {
       ))}
 
       {!items.length && <p style={s.empty}>Your list is empty. Add some items above!</p>}
+
+      {bucketPhotos.length > 0 && (
+        <div style={s.card}>
+          <h2 style={s.catTitle}>Bucket photos</h2>
+          <div style={s.photoGrid}>
+            {bucketPhotos.map(key => (
+              <img key={key} src={api.getPhotoUrl(key)} alt="Bucket photo" style={s.bucketThumbnail} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {scanning && <BarcodeScanner onDetected={handleBarcode} onClose={() => setScanning(false)} />}
     </div>
@@ -214,6 +239,8 @@ const s = {
   itemContent: { flex: 1, display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 },
   itemName: { flex: 1, fontSize: 15, minWidth: 0 },
   thumbnail: { width: 56, height: 56, objectFit: 'cover', borderRadius: 12, border: '1px solid #eee' },
+  bucketThumbnail: { width: 100, height: 100, objectFit: 'cover', borderRadius: 12, border: '1px solid #eee' },
+  photoGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 10 },
   qty: { color: '#888', fontSize: 13 },
   removeBtn: { border: 'none', background: 'none', color: '#bbb', cursor: 'pointer', fontSize: 16, padding: '0 4px' },
   clearBtn: { padding: '6px 14px', borderRadius: 8, border: '1px solid #c00', background: '#fff', color: '#c00', cursor: 'pointer', fontSize: 13 },

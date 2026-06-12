@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi import status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from database import get_db
 from models import Item, guess_category
+from storage import upload_data_url, is_storage_configured
 
 router = APIRouter()
 
@@ -21,6 +23,7 @@ class ItemUpdate(BaseModel):
     quantity: Optional[int] = None
     unit: Optional[str] = None
     checked: Optional[bool] = None
+    photo: Optional[str] = None
 
 @router.get("/")
 def list_items(db: Session = Depends(get_db)):
@@ -29,7 +32,14 @@ def list_items(db: Session = Depends(get_db)):
 @router.post("/", status_code=201)
 def create_item(item: ItemCreate, db: Session = Depends(get_db)):
     category = item.category or guess_category(item.name)
-    db_item = Item(**item.dict(exclude={"category"}), category=category)
+    photo = item.photo
+    if photo and photo.startswith("data:image/") and is_storage_configured():
+        try:
+            photo = upload_data_url(photo)
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+    db_item = Item(**item.dict(exclude={"category"}), category=category, photo=photo)
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
@@ -40,7 +50,13 @@ def update_item(item_id: int, update: ItemUpdate, db: Session = Depends(get_db))
     db_item = db.query(Item).filter(Item.id == item_id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
-    for field, value in update.dict(exclude_none=True).items():
+    update_data = update.dict(exclude_none=True)
+    if "photo" in update_data and update_data["photo"] and update_data["photo"].startswith("data:image/") and is_storage_configured():
+        try:
+            update_data["photo"] = upload_data_url(update_data["photo"])
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+    for field, value in update_data.items():
         setattr(db_item, field, value)
     db.commit()
     db.refresh(db_item)
