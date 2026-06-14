@@ -15,7 +15,7 @@ export default function App() {
   const [category, setCategory] = useState('')
   const [qty, setQty] = useState(1)
   const [scanning, setScanning] = useState(false)
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('manual')
   const [photoName, setPhotoName] = useState('')
@@ -78,7 +78,7 @@ export default function App() {
     return a.localeCompare(b)
   })
 
-  const msg = (text, err) => { setStatus({ text, err }); setTimeout(() => setStatus(''), 3000) }
+  const msg = (text, err) => { setStatus({ text, err }); setTimeout(() => setStatus(null), 3000) }
 
   const addItem = async (name, cat, barcode, photo, quantity = qty) => {
     // allow photo-only items; require at least a name or a photo
@@ -215,8 +215,8 @@ export default function App() {
               </label>
               <p style={s.hint}>Add a photo for the item you want on the list</p>
             </div>
-          )}
-      </div>
+          </div>
+        )}
 
       {/* Shopping list by category */}
       {orderedCategories.map(cat => (
@@ -282,6 +282,8 @@ export default function App() {
       )}
 
       {scanning && <BarcodeScanner onDetected={handleBarcode} onClose={() => setScanning(false)} />}
+    </div>
+)}
     </div>
   )
 }
