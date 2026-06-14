@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from './utils/api'
 import BarcodeScanner from './components/BarcodeScanner'
 
-const CATEGORIES = ['Dairy','Bakery','Meat & Fish','Fruit & Veg','Frozen','Drinks','Snacks','Household','Personal Care','Other']
+const CATEGORIES = ['Dairy', 'Bakery', 'Meat & Fish', 'Fruit & Veg', 'Frozen', 'Drinks', 'Snacks', 'Household', 'Personal Care', 'Other']
 const CATEGORY_EMOJIS = {
   'Dairy': '🧀', 'Bakery': '🥐', 'Meat & Fish': '🥩', 'Fruit & Veg': '🍎', 'Frozen': '🧊',
   'Drinks': '🥤', 'Snacks': '🍪', 'Household': '🧴', 'Personal Care': '🪥', 'Other': '🛒'
@@ -168,55 +168,57 @@ export default function App() {
       {/* Input tabs */}
       {!collapsed && (
         <div style={s.card}>
-        <div style={s.tabs}>
-          {[['manual','✏️ Type'],['barcode','📷 Barcode'],['photo','🖼 Photo']].map(([id,label]) => (
-            <button key={id} onClick={() => setActiveTab(id)} style={{ ...s.tab, ...(activeTab === id ? s.tabActive : {}) }}>{label}</button>
-          ))}
-        </div>
-
-        {activeTab === 'manual' && (
-          <div style={s.row}>
-            <input value={input} onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addItem(input)}
-              placeholder="Item name…" style={s.textInput} />
-            <select value={category} onChange={e => setCategory(e.target.value)} style={s.select}>
-              <option value="">Auto</option>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <input type="number" min={1} value={qty} onChange={e => setQty(+e.target.value)} style={s.qtyInput} />
-            <button onClick={() => addItem(input)} style={s.addBtn}>Add</button>
+          <div style={s.tabs}>
+            {[['manual', '✏️ Type'], ['barcode', '📷 Barcode'], ['photo', '🖼 Photo']].map(([id, label]) => (
+              <button key={id} onClick={() => setActiveTab(id)} style={{ ...s.tab, ...(activeTab === id ? s.tabActive : {}) }}>{label}</button>
+            ))}
           </div>
-        )}
 
-        {activeTab === 'barcode' && (
-          <div style={s.center}>
-            <button onClick={() => setScanning(true)} style={s.bigBtn} disabled={loading}>
-              {loading ? 'Looking up…' : '📷 Start scanning'}
-            </button>
-          </div>
-        )}
-
-        {activeTab === 'photo' && (
-          <div style={s.row}>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <input value={photoName} onChange={e => setPhotoName(e.target.value)}
+          {activeTab === 'manual' && (
+            <div style={s.row}>
+              <input value={input} onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addItem(input)}
                 placeholder="Item name…" style={s.textInput} />
-              <select value={photoCategory} onChange={e => setPhotoCategory(e.target.value)} style={s.select}>
+              <select value={category} onChange={e => setCategory(e.target.value)} style={s.select}>
                 <option value="">Auto</option>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-              <input type="number" min={1} value={photoQty} onChange={e => setPhotoQty(+e.target.value)} style={s.qtyInput} />
+              <input type="number" min={1} value={qty} onChange={e => setQty(+e.target.value)} style={s.qtyInput} />
+              <button onClick={() => addItem(input)} style={s.addBtn}>Add</button>
             </div>
+          )}
+
+          {activeTab === 'barcode' && (
             <div style={s.center}>
-              <label style={s.bigBtn}>
-                {loading ? 'Uploading…' : '🖼 Upload photo'}
-                <input ref={fileRef} type="file" accept="image/*" capture="environment"
-                  onChange={handlePhoto} style={{ display: 'none' }} />
-              </label>
-              <p style={s.hint}>Add a photo for the item you want on the list</p>
+              <button onClick={() => setScanning(true)} style={s.bigBtn} disabled={loading}>
+                {loading ? 'Looking up…' : '📷 Start scanning'}
+              </button>
             </div>
-          </div>
-        )}
+          )}
+
+          {activeTab === 'photo' && (
+            <div style={s.row}>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <input value={photoName} onChange={e => setPhotoName(e.target.value)}
+                  placeholder="Item name…" style={s.textInput} />
+                <select value={photoCategory} onChange={e => setPhotoCategory(e.target.value)} style={s.select}>
+                  <option value="">Auto</option>
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <input type="number" min={1} value={photoQty} onChange={e => setPhotoQty(+e.target.value)} style={s.qtyInput} />
+              </div>
+              <div style={s.center}>
+                <label style={s.bigBtn}>
+                  {loading ? 'Uploading…' : '🖼 Upload photo'}
+                  <input ref={fileRef} type="file" accept="image/*" capture="environment"
+                    onChange={handlePhoto} style={{ display: 'none' }} />
+                </label>
+                <p style={s.hint}>Add a photo for the item you want on the list</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Shopping list by category */}
       {orderedCategories.map(cat => (
@@ -282,8 +284,6 @@ export default function App() {
       )}
 
       {scanning && <BarcodeScanner onDetected={handleBarcode} onClose={() => setScanning(false)} />}
-    </div>
-)}
     </div>
   )
 }
