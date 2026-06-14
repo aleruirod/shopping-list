@@ -216,7 +216,6 @@ export default function App() {
               <p style={s.hint}>Add a photo for the item you want on the list</p>
             </div>
           )}
-        )}
       </div>
 
       {/* Shopping list by category */}
