@@ -20,6 +20,8 @@ KEYWORD_MAP = {
 }
 
 def guess_category(name: str) -> str:
+    if not name:
+        return "Other"
     name_lower = name.lower()
     for keyword, category in KEYWORD_MAP.items():
         if keyword in name_lower:
@@ -30,7 +32,7 @@ class Item(Base):
     __tablename__ = "items"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=True, default="")
     category = Column(String, default="Other")
     quantity = Column(Integer, default=1)
     unit = Column(String, default="")

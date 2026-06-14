@@ -10,7 +10,7 @@ from storage import upload_data_url, is_storage_configured
 router = APIRouter()
 
 class ItemCreate(BaseModel):
-    name: str
+    name: Optional[str] = None
     category: Optional[str] = None
     quantity: int = 1
     unit: str = ""
@@ -31,7 +31,9 @@ def list_items(db: Session = Depends(get_db)):
 
 @router.post("/", status_code=201)
 def create_item(item: ItemCreate, db: Session = Depends(get_db)):
-    category = item.category or guess_category(item.name)
+    # allow creating items with only a photo (no name)
+    name = item.name or ""
+    category = item.category or guess_category(name)
     photo = item.photo
     if photo and photo.startswith("data:image/") and is_storage_configured():
         try:
@@ -39,7 +41,10 @@ def create_item(item: ItemCreate, db: Session = Depends(get_db)):
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
-    db_item = Item(**item.dict(exclude={"category", "photo"}), category=category, photo=photo)
+    # build payload for DB: ensure name is set (may be empty string)
+    payload = item.dict(exclude={"category", "photo"})
+    payload['name'] = name
+    db_item = Item(**payload, category=category, photo=photo)
     db.add(db_item)
     db.commit()
     db.refresh(db_item)

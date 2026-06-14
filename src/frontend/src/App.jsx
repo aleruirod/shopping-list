@@ -3,20 +3,27 @@ import { api } from './utils/api'
 import BarcodeScanner from './components/BarcodeScanner'
 
 const CATEGORIES = ['Dairy','Bakery','Meat & Fish','Fruit & Veg','Frozen','Drinks','Snacks','Household','Personal Care','Other']
+const CATEGORY_EMOJIS = {
+  'Dairy': '🧀', 'Bakery': '🥐', 'Meat & Fish': '🥩', 'Fruit & Veg': '🍎', 'Frozen': '🧊',
+  'Drinks': '🥤', 'Snacks': '🍪', 'Household': '🧴', 'Personal Care': '🪥', 'Other': '🛒'
+}
 
 export default function App() {
   const [items, setItems] = useState([])
   const [input, setInput] = useState('')
-  const [category, setCategory] = useState('Other')
+  // empty string means auto-categorize (default)
+  const [category, setCategory] = useState('')
   const [qty, setQty] = useState(1)
   const [scanning, setScanning] = useState(false)
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('manual')
   const [photoName, setPhotoName] = useState('')
-  const [photoCategory, setPhotoCategory] = useState('Other')
+  const [photoCategory, setPhotoCategory] = useState('')
   const [photoQty, setPhotoQty] = useState(1)
   const fileRef = useRef()
+
+  const [collapsed, setCollapsed] = useState(false)
 
   const [bucketPhotos, setBucketPhotos] = useState([])
   const [selectedPhoto, setSelectedPhoto] = useState(null)
@@ -74,9 +81,22 @@ export default function App() {
   const msg = (text, err) => { setStatus({ text, err }); setTimeout(() => setStatus(''), 3000) }
 
   const addItem = async (name, cat, barcode, photo, quantity = qty) => {
-    if (!name.trim()) return
-    await api.addItem({ name: name.trim(), category: cat || category, quantity, barcode, photo })
-    setInput(''); setQty(1); setPhotoName(''); setPhotoQty(1); setPhotoCategory('Other');
+    // allow photo-only items; require at least a name or a photo
+    const hasName = !!(name && name.trim())
+    const hasPhoto = !!photo
+    if (!hasName && !hasPhoto) return
+
+    const payload = { quantity }
+    if (hasName) payload.name = name.trim()
+    if (barcode) payload.barcode = barcode
+    if (hasPhoto) payload.photo = photo
+
+    // only send category when user explicitly selected one; otherwise backend will infer
+    const chosenCat = cat || category
+    if (chosenCat) payload.category = chosenCat
+
+    await api.addItem(payload)
+    setInput(''); setQty(1); setPhotoName(''); setPhotoQty(1); setPhotoCategory('');
     await refresh()
     refreshBucketPhotos()
   }
@@ -97,10 +117,6 @@ export default function App() {
   const handlePhoto = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (!photoName.trim()) {
-      msg('Enter a name for the photo item', true)
-      return
-    }
     setLoading(true)
     msg('Uploading photo item…')
     try {
@@ -110,8 +126,9 @@ export default function App() {
         reader.onerror = reject
         reader.readAsDataURL(file)
       })
+      // photoName may be empty — addItem supports photo-only items
       await addItem(photoName, photoCategory, null, photoData, photoQty)
-      msg(`Added: ${photoName}`)
+      msg(photoName ? `Added: ${photoName}` : 'Added photo item')
     } catch (e) {
       msg(e.message || 'Failed to upload photo item', true)
     } finally {
@@ -131,10 +148,15 @@ export default function App() {
   return (
     <div style={s.app}>
       <header style={s.header}>
-        <h1 style={s.title}>🛒 Shopping List</h1>
-        {items.some(i => i.checked) && (
-          <button onClick={clearChecked} style={s.clearBtn}>Remove checked</button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h1 style={s.title}>🛒 Shopping List</h1>
+          <button onClick={() => setCollapsed(c => !c)} style={s.collapseBtn}>{collapsed ? '▸' : '▾'}</button>
+        </div>
+        <div>
+          {items.some(i => i.checked) && (
+            <button onClick={clearChecked} style={s.clearBtn}>Remove checked</button>
+          )}
+        </div>
       </header>
 
       {status && (
@@ -144,7 +166,8 @@ export default function App() {
       )}
 
       {/* Input tabs */}
-      <div style={s.card}>
+      {!collapsed && (
+        <div style={s.card}>
         <div style={s.tabs}>
           {[['manual','✏️ Type'],['barcode','📷 Barcode'],['photo','🖼 Photo']].map(([id,label]) => (
             <button key={id} onClick={() => setActiveTab(id)} style={{ ...s.tab, ...(activeTab === id ? s.tabActive : {}) }}>{label}</button>
@@ -157,7 +180,8 @@ export default function App() {
               onKeyDown={e => e.key === 'Enter' && addItem(input)}
               placeholder="Item name…" style={s.textInput} />
             <select value={category} onChange={e => setCategory(e.target.value)} style={s.select}>
-              {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              <option value="">Auto</option>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <input type="number" min={1} value={qty} onChange={e => setQty(+e.target.value)} style={s.qtyInput} />
             <button onClick={() => addItem(input)} style={s.addBtn}>Add</button>
@@ -178,7 +202,8 @@ export default function App() {
               <input value={photoName} onChange={e => setPhotoName(e.target.value)}
                 placeholder="Item name…" style={s.textInput} />
               <select value={photoCategory} onChange={e => setPhotoCategory(e.target.value)} style={s.select}>
-                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                <option value="">Auto</option>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
               <input type="number" min={1} value={photoQty} onChange={e => setPhotoQty(+e.target.value)} style={s.qtyInput} />
             </div>
@@ -190,14 +215,14 @@ export default function App() {
               </label>
               <p style={s.hint}>Add a photo for the item you want on the list</p>
             </div>
-          </div>
+          )}
         )}
       </div>
 
       {/* Shopping list by category */}
       {orderedCategories.map(cat => (
         <div key={cat} style={s.card}>
-          <h2 style={s.catTitle}>{cat} <span style={s.badge}>{grouped[cat].filter(i => !i.checked).length}</span></h2>
+          <h2 style={s.catTitle}>{CATEGORY_EMOJIS[cat] || '🛒'} {cat} <span style={s.badge}>{grouped[cat].filter(i => !i.checked).length}</span></h2>
           {grouped[cat].map(item => (
             <div key={item.id} style={{ ...s.itemRow, opacity: item.checked ? 0.5 : 1 }}>
               <input type="checkbox" checked={item.checked} onChange={() => toggle(item)} style={s.checkbox} />
@@ -265,8 +290,8 @@ export default function App() {
 const s = {
   app: { maxWidth: 600, margin: '0 auto', padding: '16px', fontFamily: 'system-ui, sans-serif', background: '#f5f5f5', minHeight: '100vh' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  title: { margin: 0, fontSize: 22, fontWeight: 700 },
-  card: { background: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' },
+  title: { margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: '0.2px' },
+  card: { background: '#fff', borderRadius: 14, padding: 16, marginBottom: 12, boxShadow: '0 6px 18px rgba(15,23,42,0.06)' },
   tabs: { display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' },
   tab: { padding: '6px 10px', borderRadius: 8, border: '1px solid #ddd', background: '#f9f9f9', cursor: 'pointer', fontSize: 13 },
   tabActive: { background: '#1a73e8', color: '#fff', borderColor: '#1a73e8' },
@@ -274,7 +299,7 @@ const s = {
   textInput: { flex: 2, padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, minWidth: 120 },
   select: { flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13, minWidth: 100 },
   qtyInput: { width: 52, padding: '8px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14, textAlign: 'center' },
-  addBtn: { padding: '8px 16px', borderRadius: 8, border: 'none', background: '#1a73e8', color: '#fff', cursor: 'pointer', fontSize: 14 },
+  addBtn: { padding: '8px 16px', borderRadius: 10, border: 'none', background: 'linear-gradient(90deg,#4f46e5,#1e90ff)', color: '#fff', cursor: 'pointer', fontSize: 14, boxShadow: '0 6px 18px rgba(30,144,255,0.12)' },
   bigBtn: { display: 'inline-block', padding: '12px 24px', borderRadius: 10, border: 'none', background: '#1a73e8', color: '#fff', cursor: 'pointer', fontSize: 15, textAlign: 'center' },
   center: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 },
   hint: { margin: 0, fontSize: 12, color: '#888', textAlign: 'center' },
@@ -299,6 +324,7 @@ const s = {
   qty: { color: '#888', fontSize: 13 },
   removeBtn: { border: 'none', background: 'none', color: '#bbb', cursor: 'pointer', fontSize: 16, padding: '0 4px' },
   clearBtn: { padding: '6px 14px', borderRadius: 8, border: '1px solid #c00', background: '#fff', color: '#c00', cursor: 'pointer', fontSize: 13 },
+  collapseBtn: { border: 'none', background: 'none', fontSize: 18, cursor: 'pointer', padding: '4px 8px', color: '#666' },
   toast: { padding: '10px 16px', borderRadius: 8, marginBottom: 12, fontSize: 14 },
   empty: { textAlign: 'center', color: '#aaa', marginTop: 40 }
 }
